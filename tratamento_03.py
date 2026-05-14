@@ -25,7 +25,7 @@ def definir_condicoes_operacao(df_train, df_test):
     
     return df_train, df_test
 
-def normalizar_dados(df_train, df_test, no_ops=1, coluna_condicao='condicao_operacao'):
+def normalizar_dados(df_train, df_test, no_ops=6, coluna_condicao='condicao_operacao'):
     if no_ops == 1:
         # Lógica original (Global MinMax)
         scaler = MinMaxScaler(feature_range=(0, 1))
@@ -164,7 +164,7 @@ def obter_dados_tratados_2d():
     
     # Processamento sequencial
     df_t0, df_ts0 = definir_condicoes_operacao(df_bruto_train, df_bruto_test)
-    df_t1, df_ts1 = normalizar_dados(df_t0, df_ts0, no_ops=1, coluna_condicao='cluster_op')
+    df_t1, df_ts1 = normalizar_dados(df_t0, df_ts0, no_ops=6, coluna_condicao='cluster_op')
     df_t2, df_ts2 = filtrar_dados(df_t1.copy(), df_ts1.copy())
     
     fs_train, fs_test = extrair_fused_signal(df_t2, df_ts2)

@@ -1,4 +1,4 @@
-from importacao_01 import importar_dados, plots_design
+from importacao_01 import importar_dados, plots_design ##teste de branch
 from sklearn.metrics import silhouette_score
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
