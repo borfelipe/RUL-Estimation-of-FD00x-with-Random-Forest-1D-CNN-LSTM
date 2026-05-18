@@ -2,6 +2,7 @@ import tensorflow as tf
 import keras_tuner as kt
 from tratamento_03 import preparar_dados_redes_neurais
 
+tw = 30 # time window lenght
 
 # ==============================================================================
 # Otimização Bayesiana - Ref: Li e He, 2020
@@ -23,7 +24,7 @@ class CNNHyperModel(kt.HyperModel):
             padding='same', 
             activation='relu', 
             kernel_regularizer=tf.keras.regularizers.l2(l2_reg),
-            input_shape=(30, 2)
+            input_shape=(tw, 2)
         ))
         model.add(tf.keras.layers.MaxPooling1D(pool_size=3))
         
@@ -61,7 +62,7 @@ class CNNHyperModel(kt.HyperModel):
 
 def otimizar_cnn():
     print("\n--- Iniciando Otimização Bayesiana da CNN ---")
-    X_train, Y_train, X_test = preparar_dados_redes_neurais(seq_len=30)
+    X_train, Y_train, X_test = preparar_dados_redes_neurais(seq_len=tw)
     
     tuner = kt.BayesianOptimization(
         hypermodel=CNNHyperModel(),

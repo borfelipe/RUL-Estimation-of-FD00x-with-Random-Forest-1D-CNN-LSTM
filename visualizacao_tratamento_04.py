@@ -60,7 +60,7 @@ def menu_visualizacao_tratamento():
                 
             axs[1].set_xlabel("Ciclo")
             axs[1].set_ylabel("Sinal Fundido")
-            axs[1].set_ylim(-0.05, 0.8) 
+            axs[1].set_ylim(-0.05, 1.05) 
             # Correção: Adicionado o parâmetro 'fig'
             plots_design(axs[1], fig, posicao_legenda='dentro')
             

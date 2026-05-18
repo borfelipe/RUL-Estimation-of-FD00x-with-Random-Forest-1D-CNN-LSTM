@@ -10,6 +10,12 @@ from importacao_01 import importar_dados
 
 COLUNAS_MANTER = ['T24', 'T30', 'T50', 'P30', 'Nf', 'Nc', 'PS30', 'phi', 'NRf', 'NRc', 'BPR', 'htBleed', 'W31', 'W32']
 
+FD_02_04 = False # É o dataset 2 ou 4? 
+Nops = 6 if FD_02_04 else 1 # Número de Condições Operacionais
+Nsegmentos = 2 #no. segmentos pwl
+CPD = 1 #cpd pwl
+tw = 30 # time window lenght
+
 # --- funções para tratamento
 
 def filtro_passa_baixa(serie, cutoff=0.08, order=1):
@@ -25,7 +31,8 @@ def definir_condicoes_operacao(df_train, df_test):
     
     return df_train, df_test
 
-def normalizar_dados(df_train, df_test, no_ops=6, coluna_condicao='condicao_operacao'):
+
+def normalizar_dados(df_train, df_test, no_ops=Nops, coluna_condicao='condicao_operacao'):
     if no_ops == 1:
         # Lógica original (Global MinMax)
         scaler = MinMaxScaler(feature_range=(0, 1))
@@ -130,7 +137,7 @@ def rotular_rul_cpd(fs_train):
     
     for unid, dados in df_rotulado.groupby('unidade'):
         my_pwlf = pwlf.PiecewiseLinFit(dados['ciclo'].values, dados['FS'].values)
-        cp = my_pwlf.fit(2)[1]
+        cp = my_pwlf.fit(Nsegmentos)[CPD]
         cps[unid] = cp
         df_rotulado.loc[(df_rotulado['unidade'] == unid) & (df_rotulado['ciclo'] < cp), 'RUL_CPD'] = dados['ciclo'].max() - cp # O RUL permanece constante até o CP, após o CP ele decai linearmente
         
@@ -164,7 +171,7 @@ def obter_dados_tratados_2d():
     
     # Processamento sequencial
     df_t0, df_ts0 = definir_condicoes_operacao(df_bruto_train, df_bruto_test)
-    df_t1, df_ts1 = normalizar_dados(df_t0, df_ts0, no_ops=6, coluna_condicao='cluster_op')
+    df_t1, df_ts1 = normalizar_dados(df_t0, df_ts0, no_ops=Nops, coluna_condicao='cluster_op')
     df_t2, df_ts2 = filtrar_dados(df_t1.copy(), df_ts1.copy())
     
     fs_train, fs_test = extrair_fused_signal(df_t2, df_ts2)
@@ -182,13 +189,13 @@ def obter_dados_tratados_2d():
         "corr_val_train": v_corr_tr
     }
 
-def preparar_dados_redes_neurais(seq_len=30):
+def preparar_dados_redes_neurais(seq_len=tw):
     """Prepara matrizes 3D para CNN/LSTM sem carregar rótulos de teste."""
     df_train_raw, df_test_raw, _ = importar_dados()
     
     # Pipeline de tratamento
     df_t0, df_ts0 = definir_condicoes_operacao(df_train_raw, df_test_raw)
-    df_t1, df_ts1 = normalizar_dados(df_t0, df_ts0, no_ops=1, coluna_condicao='cluster_op')
+    df_t1, df_ts1 = normalizar_dados(df_t0, df_ts0, no_ops=Nops, coluna_condicao='cluster_op')
     df_t2, df_ts2 = filtrar_dados(df_t1, df_ts1)
     
     fs_train, fs_test = extrair_fused_signal(df_t2, df_ts2)
