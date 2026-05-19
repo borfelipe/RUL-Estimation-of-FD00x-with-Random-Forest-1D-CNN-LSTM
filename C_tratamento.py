@@ -77,11 +77,46 @@ def filtrar_dados(df_train, df_test):
     return df_train, df_test
 
 def extrair_fused_signal(df_train, df_test):
-    # 1. Arquitetura da Rede (conforme artigo)
+    otimizar = False  # Mude para True quando quiser realizar a busca em grade (Tabela 4)
+    
+    # Separação das features
+    X_train = df_train[COLUNAS_MANTER]
+    X_test = df_test[COLUNAS_MANTER]
+    
+    # Valores padrão (Caso otimizar=False)
+    best_epochs, best_batch, best_nodes = 30, 128, 7 #30, 128, 7
+
+    # Otimização em Grade (Grid Search)
+    if otimizar:
+        print("Iniciando busca em grade para o Autoencoder...")
+        melhor_loss = float('inf')
+        
+        for ep in [20, 25, 30, 40]:
+            for bs in [64, 128, 256]:
+                for nd in [5, 7, 10]:
+                    inp = Input(shape=(14,))
+                    enc = Dense(nd, activation='relu')(inp)
+                    fs = Dense(1, activation='linear')(enc)
+                    dec = Dense(nd, activation='relu')(fs)
+                    out = Dense(14, activation='linear')(dec)
+                    
+                    ae_temp = Model(inputs=inp, outputs=out)
+                    ae_temp.compile(optimizer='adam', loss='mse')
+                    
+                    hist = ae_temp.fit(X_train, X_train, epochs=ep, batch_size=bs, validation_split=0.2, verbose=0)
+                    val_loss = hist.history['val_loss'][-1]
+                    
+                    if val_loss < melhor_loss:
+                        melhor_loss = val_loss
+                        best_epochs, best_batch, best_nodes = ep, bs, nd
+                        
+        print(f"Melhores hiperparâmetros: Epochs={best_epochs}, Batch={best_batch}, Nodes={best_nodes} | Val Loss={melhor_loss:.5f}")
+
+    # 1. Arquitetura da Rede Final (com os melhores parâmetros ou originais)
     entrada = Input(shape=(14,))
-    encoder_hidden = Dense(7, activation='relu')(entrada)
+    encoder_hidden = Dense(best_nodes, activation='relu')(entrada)
     sinal_fundido = Dense(1, activation='linear', name='fused')(encoder_hidden)
-    decoder_hidden = Dense(7, activation='relu')(sinal_fundido)
+    decoder_hidden = Dense(best_nodes, activation='relu')(sinal_fundido)
     saida = Dense(14, activation='linear')(decoder_hidden)
     
     ae = Model(inputs=entrada, outputs=saida)
@@ -90,17 +125,13 @@ def extrair_fused_signal(df_train, df_test):
     ae.compile(optimizer='adam', loss='mse')
     
     # Treinamento com 80/20 split
-    ae.fit(
-        df_train[COLUNAS_MANTER], df_train[COLUNAS_MANTER], 
-        epochs=30, batch_size=128, validation_split=0.2, verbose=0
-    )
+    ae.fit(X_train, X_train, epochs=best_epochs, batch_size=best_batch, validation_split=0.2, verbose=0)
     
     # 2. Extração Bruta
-    fs_train_bruto = extrator_fs.predict(df_train[COLUNAS_MANTER], verbose=0)
-    fs_test_bruto = extrator_fs.predict(df_test[COLUNAS_MANTER], verbose=0)
+    fs_train_bruto = extrator_fs.predict(X_train, verbose=0)
+    fs_test_bruto = extrator_fs.predict(X_test, verbose=0)
     
     # 3. Correção de Direcionalidade
-    # Verifica a correlação com o tempo (ciclo). Se for negativa (sinal caindo), invertemos.
     correlacao = np.corrcoef(df_train['ciclo'], fs_train_bruto.flatten())[0, 1]
     if correlacao < 0:
         fs_train_bruto = -fs_train_bruto
@@ -109,7 +140,7 @@ def extrair_fused_signal(df_train, df_test):
     # 4. Normalização do Fused Signal (0 a 1)
     scaler_fs = MinMaxScaler(feature_range=(0, 1))
     df_train['FS'] = scaler_fs.fit_transform(fs_train_bruto)
-    df_test['FS'] = scaler_fs.transform(fs_test_bruto) # Importante: apenas transform no teste
+    df_test['FS'] = scaler_fs.transform(fs_test_bruto) 
     
     return df_train, df_test
 
@@ -143,12 +174,16 @@ def rotular_rul_cpd(fs_train):
         
     return df_rotulado, cps
 
-def extrair_janelas_3d(df_train, df_test, seq_len):
+def extrair_janelas_3d(df_train, df_test, seq_len, usar_df=True):
     X_train, Y_train, X_test = [], [], []
+    
+    # Define as features baseadas na flag
+    features = ['FS', 'DF'] if usar_df else ['FS']
+    num_features = len(features)
     
     # Treino: Janelas deslizantes em cada motor
     for _, d in df_train.groupby('unidade'):
-        v = d[['FS', 'DF']].values
+        v = d[features].values
         r = d['RUL_CPD'].values
         for i in range(len(v) - seq_len + 1):
             X_train.append(v[i:i+seq_len])
@@ -156,9 +191,9 @@ def extrair_janelas_3d(df_train, df_test, seq_len):
             
     # Teste: Apenas a última janela de cada motor (com padding se necessário)
     for _, d in df_test.groupby('unidade'):
-        v = d[['FS', 'DF']].values
+        v = d[features].values
         if len(v) < seq_len:
-            v = np.vstack([np.zeros((seq_len - len(v), 2)), v])
+            v = np.vstack([np.zeros((seq_len - len(v), num_features)), v])
         X_test.append(v[-seq_len:])
 
     return np.array(X_train), np.array(Y_train), np.array(X_test)
@@ -189,7 +224,7 @@ def obter_dados_tratados_2d():
         "corr_val_train": v_corr_tr
     }
 
-def preparar_dados_redes_neurais(seq_len=tw):
+def preparar_dados_redes_neurais(seq_len=tw, usar_df=True):
     """Prepara matrizes 3D para CNN/LSTM sem carregar rótulos de teste."""
     df_train_raw, df_test_raw, _ = importar_dados()
     
@@ -202,5 +237,5 @@ def preparar_dados_redes_neurais(seq_len=tw):
     fs_train_rotulado, _ = rotular_rul_cpd(fs_train)
     df_train, df_test, _, _ = construir_difference_feature(fs_train_rotulado, fs_test)
     
-    # Retorna apenas os dados de treino (X, Y) e teste (X)
-    return extrair_janelas_3d(df_train, df_test, seq_len)
+    # Retorna apenas os dados de treino (X, Y) e teste (X), repassando a flag usar_df
+    return extrair_janelas_3d(df_train, df_test, seq_len, usar_df=usar_df)

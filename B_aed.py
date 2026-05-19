@@ -8,7 +8,7 @@ from sklearn.preprocessing import StandardScaler
 from importacao_01 import importar_dados, plots_design
 
 # =====================================================================
-COLUNAS_OP = ['Altitude (kft)', 'Mach', 'TRA']
+COLUNAS_OP = ['Altitude', 'Mach', 'TRA']
 CMAP_CLUSTERS = ListedColormap(['#1F77B4', '#D62728', '#2CA02C', '#9467BD', '#FF7F0E', '#3A3A3A'])
 
 INFO_SENSORES = {
@@ -172,7 +172,7 @@ def menu_exploratorio():
                 if cluster: fig3d.colorbar(scatter3d, ax=ax3d, label='Cluster Operacional', pad=0.1)
                 ax3d.set(title=f"Operação vs RUL (3D) - Motor {unidade}", xlabel="Altitude", ylabel="Mach", zlabel="TRA")
                 
-                plots_design(ax3d, fig=fig3d, tamanho_figura=1)
+                plots_design(ax3d, fig=fig3d, tamanho_figura=2)
                 plt.show()
 
 if __name__ == "__main__":
