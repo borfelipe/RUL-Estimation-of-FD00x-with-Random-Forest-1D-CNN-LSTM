@@ -7,12 +7,12 @@ from sklearn.tree import plot_tree
 import matplotlib.image as mpimg
 import visualkeras
 
-from importacao_01 import plots_design
-from tratamento_03 import preparar_dados_redes_neurais, obter_dados_tratados_2d
+from A_importacao import plots_design
+from C_tratamento import preparar_dados_redes_neurais, obter_dados_tratados_2d
 
 def obter_info_teste():
     """Retorna um DataFrame com unidade, ciclo máximo e RUL real do conjunto de teste"""
-    from importacao_01 import importar_dados
+    from A_importacao import importar_dados
     _, df_test, y_test_final = importar_dados()
     
     info = []
@@ -118,6 +118,7 @@ def menu_avaliacao(df, model_rf, model_cnn):
         print("5 - Métricas Globais (RMSE e Score)")
         print("6 - Visualizar árvore da Random Forest")
         print("7 - Visualizar arquitetura da CNN")
+        print("8 - Otimização de Custos e Risco")
         print("0 - Sair")
         
         op = input("Escolha: ").strip()
@@ -248,7 +249,92 @@ def menu_avaliacao(df, model_rf, model_cnn):
             
         elif op == '7':
             visualizar_cnn(model_cnn, nome_cnn)
-
+        
+        elif op == '8':
+            print("1 - Random Forest\n2 - CNN")
+            modelo_op = input("Escolha o modelo para a Otimização de Custos: ").strip()
+            if modelo_op not in ['1', '2']: 
+                print("Opção inválida.")
+                continue
+                
+            col_pred = 'RUL_RF' if modelo_op == '1' else 'RUL_CNN'
+            
+            # Cálculo do erro: RUL_predict - RUL_actual
+            erro = df[col_pred] - df['RUL_true']
+            
+            # --- Parâmetros de Custo Otimizados (Modelo Híbrido PHM) ---
+            C_p = 3.5e6  # Custo fixo da manutenção preventiva
+            C_f = 4.0e6 # Custo fixo da falha inesperada em voo
+            C_w = 2.0e4   # Penalidade financeira por ciclo útil desperdiçado (Age cedo demais)
+            
+            # Limites Espelhados
+            margem_min = -erro.max() - 1 
+            margem_max = -erro.min() + 1
+            N_motores = len(erro)
+            
+            x_vals = np.linspace(margem_min, margem_max, 200)
+            
+            c1_vals = []
+            c2_vals = []
+            ctot_vals = []
+            prob_vals = []
+            
+            for x in x_vals:
+                falhou = erro >= -x
+                prevenido = erro < -x
+                
+                # C1: Custo fixo + Desperdício (Quanto mais à esquerda no gráfico, maior o desperdício)
+                ciclos_desperdicados = -erro[prevenido] - x
+                c1 = np.sum(prevenido) * C_p + np.sum(ciclos_desperdicados) * C_w
+                
+                # C2: Custo exclusivo dos motores que falharam
+                c2 = np.sum(falhou) * C_f
+                
+                c1_vals.append(c1)
+                c2_vals.append(c2)
+                ctot_vals.append(c1 + c2)
+                prob_vals.append(np.sum(falhou) / N_motores)
+                
+            # Encontrar o ponto ótimo
+            min_idx = np.argmin(ctot_vals)
+            opt_x = x_vals[min_idx]
+            opt_ctot = ctot_vals[min_idx]
+            opt_prob = prob_vals[min_idx]
+            
+            # --- Gráfico 1: Otimização de Custos ---
+            fig1, ax1 = plt.subplots()
+            
+            ax1.plot(x_vals, c1_vals, label='C1 (Prevenção + Desperdício)', color='green', alpha=0.8)
+            ax1.plot(x_vals, c2_vals, label='C2 (Custo de Falha)', color='red', alpha=0.8)
+            ax1.plot(x_vals, ctot_vals, label='C_total (Soma)', color='black', linewidth=2)
+            
+            ax1.axvline(opt_x, color='blue', linestyle='--', 
+                        label=f'Ação Ótima (x={opt_x:.1f})\nCusto Mín={opt_ctot:.0f}')
+            
+            ax1.set_xlabel("Margem de Decisão (Ciclos após RUL Predito)")
+            ax1.set_ylabel("Custo Financeiro Relativo")
+            ax1.set_xlim(margem_min, margem_max)
+            
+            plots_design(ax1, fig1, tamanho_figura=2, posicao_legenda='dentro')
+            plt.show()
+            
+            # --- Gráfico 2: Probabilidade de Falha Operacional ---
+            fig2, ax2 = plt.subplots()
+            
+            ax2.plot(x_vals, prob_vals, label='Curva de Risco', color='purple', linewidth=2)
+            
+            ax2.axvline(opt_x, color='blue', linestyle='--', label=f'Ação Ótima (x={opt_x:.1f})')
+            ax2.axhline(opt_prob, color='gray', linestyle=':', 
+                        label=f'Risco Aceitável = {opt_prob:.2%}')
+            
+            ax2.set_xlabel("Margem de Decisão (Ciclos após RUL Predito)")
+            ax2.set_ylabel("Probabilidade de Falha")
+            ax2.set_xlim(margem_min, margem_max)
+            ax2.set_ylim(0, 1)
+            
+            plots_design(ax2, fig2, tamanho_figura=2, posicao_legenda='dentro')
+            plt.show()
+                
 # =====================================================================
 # 2. PIPELINE DE EXECUÇÃO
 # =====================================================================

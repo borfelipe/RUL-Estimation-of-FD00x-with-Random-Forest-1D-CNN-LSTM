@@ -6,7 +6,7 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.cluster import KMeans
 from tensorflow.keras import Input, Model
 from tensorflow.keras.layers import Dense
-from importacao_01 import importar_dados
+from A_importacao import importar_dados
 
 COLUNAS_MANTER = ['T24', 'T30', 'T50', 'P30', 'Nf', 'Nc', 'PS30', 'phi', 'NRf', 'NRc', 'BPR', 'htBleed', 'W31', 'W32']
 

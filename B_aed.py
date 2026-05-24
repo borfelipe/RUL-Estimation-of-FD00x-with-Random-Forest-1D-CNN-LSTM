@@ -5,23 +5,23 @@ from matplotlib.colors import ListedColormap
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler
-from importacao_01 import importar_dados, plots_design
+from A_importacao import importar_dados, plots_design
 
 # =====================================================================
 COLUNAS_OP = ['Altitude', 'Mach', 'TRA']
 CMAP_CLUSTERS = ListedColormap(['#1F77B4', '#D62728', '#2CA02C', '#9467BD', '#FF7F0E', '#3A3A3A'])
 
 INFO_SENSORES = {
-    "T2": {"id": "S1: T_2", "unid": "°R"}, "T24": {"id": "S2: T_24", "unid": "°R"},
-    "T30": {"id": "S3: T_30", "unid": "°R"}, "T50": {"id": "S4: T_50", "unid": "°R"},
-    "P2": {"id": "S5: P_2", "unid": "psia"}, "P15": {"id": "S6: P_15", "unid": "psia"},
-    "P30": {"id": "S7: P_30", "unid": "psia"}, "Nf": {"id": "S8: N_f", "unid": "rpm"},
-    "Nc": {"id": "S9: N_c", "unid": "rpm"}, "Epr": {"id": "S10: epr", "unid": "--"},
+    "T2": {"id": "S1: T2", "unid": "°R"}, "T24": {"id": "S2: T24", "unid": "°R"},
+    "T30": {"id": "S3: T30", "unid": "°R"}, "T50": {"id": "S4: T50", "unid": "°R"},
+    "P2": {"id": "S5: P2", "unid": "psia"}, "P15": {"id": "S6: P15", "unid": "psia"},
+    "P30": {"id": "S7: P30", "unid": "psia"}, "Nf": {"id": "S8: Nf", "unid": "rpm"},
+    "Nc": {"id": "S9: Nc", "unid": "rpm"}, "Epr": {"id": "S10: epr", "unid": "--"},
     "PS30": {"id": "S11: Ps30", "unid": "psia"}, "phi": {"id": "S12: phi", "unid": "pps/psi"},
     "NRf": {"id": "S13: NRf", "unid": "rpm"}, "NRc": {"id": "S14: NRc", "unid": "rpm"},
     "BPR": {"id": "S15: BPR", "unid": "--"}, "farB": {"id": "S16: farB", "unid": "--"},
-    "htBleed": {"id": "S17: htBleed", "unid": "--"}, "Nf_dmd": {"id": "S18: Nf_dmd", "unid": "rpm"},
-    "PCNfR_dmd": {"id": "S19: PCNfR_dmd", "unid": "rpm"}, "W31": {"id": "S20: W31", "unid": "lbm/s"},
+    "htBleed": {"id": "S17: htBleed", "unid": "--"}, "Nfdmd": {"id": "S18: Nfdmd", "unid": "rpm"},
+    "PCNfRdmd": {"id": "S19: PCNfRdmd", "unid": "rpm"}, "W31": {"id": "S20: W31", "unid": "lbm/s"},
     "W32": {"id": "S21: W32", "unid": "lbm/s"},
 }
 SENSORES = list(INFO_SENSORES.keys())
@@ -81,7 +81,7 @@ def configurar_grafico(ax, sensor, is_padr=False):
 
 def plotar_sensores(df, usar_cluster, is_padr=False, modo_visualizacao='individual'):
     os.makedirs('imagens', exist_ok=True)
-    sufixo = "-NF" if is_padr else ""
+    sufixo = "-PAD" if is_padr else ""
     tamanho = 3
     
     if modo_visualizacao == 'grade':
@@ -113,7 +113,7 @@ def plotar_sensores(df, usar_cluster, is_padr=False, modo_visualizacao='individu
             plots_design(ax, fig=fig, tamanho_figura=tamanho)
             
             num_y = INFO_SENSORES[sens]['id'].split(':')[0].replace('S', '')
-            plt.savefig(f"imagens/FD001-S{num_y}{sufixo}.png", dpi=600, bbox_inches='tight', pad_inches=0.01)
+            plt.savefig(f"imagens/FD002-S{num_y}{sufixo}.png", dpi=600, bbox_inches='tight', pad_inches=0.01)
             plt.close(fig)
             
         print(f"\n[+] Imagens individuais (tamanho {tamanho}) guardadas em 'imagens/'.")

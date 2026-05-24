@@ -6,7 +6,7 @@ FEATURES = [
     "unidade", "ciclo", "Altitude", "Mach", "TRA",
     "T2", "T24", "T30", "T50", "P2", "P15", "P30",
     "Nf", "Nc", "Epr", "PS30", "phi", "NRf", "NRc",
-    "BPR", "farB", "htBleed", "Nf_dmd", "PCNfR_dmd",
+    "BPR", "farB", "htBleed", "Nfdmd", "PCNfRdmd",
     "W31", "W32"
 ]
 
@@ -29,8 +29,8 @@ def importar_dados(train_path="train.txt", test_path="test.txt", rul_path="rul.t
 
 def plots_design(ax, fig=None, tamanho_figura=1, posicao_legenda='dentro', is_grade=False, espacamento_ticks=None, labelpad_3d=5):
     # --- DIMENSIONAMENTO ---
-    larg_rel, hw_ratio = {1: (1.0, 0.4), 2: (0.48, 0.8), 3: (0.32, 0.6)}.get(tamanho_figura, (1.0, 0.4))
-    fontsize = 6
+    larg_rel, hw_ratio = {1: (1.0, 0.4), 2: (0.48, 0.6), 3: (0.32, 0.6)}.get(tamanho_figura, (1.0, 0.4))
+    fontsize = 8
     is_3d = hasattr(ax, 'zaxis')
     
     if is_3d and tamanho_figura == 1:
